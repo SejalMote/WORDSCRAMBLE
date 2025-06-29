@@ -1,0 +1,177 @@
+import tkinter as tk
+from tkinter import messagebox
+from PIL import Image, ImageTk
+import random
+
+# -------------------- WORD LIST --------------------
+words = ["apple", "banana", "grapes", "mango", "cherry",
+         "lemon", "peach", "guava", "kiwi", "apricot",
+         "orange", "pear", "papaya", "plum", "melon",
+         "blueberry", "raspberry", "strawberry", "pineapple", "dragonfruit"]
+
+used_words = []
+remaining_words = []
+max_words = 5
+words_played = 0
+
+# -------------------- FUNCTIONS --------------------
+def scramble_word(word):
+    word = list(word)
+    random.shuffle(word)
+    return ''.join(word)
+
+def get_word_by_level(level):
+    if level == "Easy":
+        level_words = [w for w in words if 4 <= len(w) <= 6]
+    elif level == "Medium":
+        level_words = [w for w in words if 7 <= len(w) <= 8]
+    else:
+        level_words = [w for w in words if len(w) >= 9]
+    return [w for w in level_words if w not in used_words]
+
+def start_game():
+    start_btn.place_forget()
+    level_menu.place(x=screen_width//2 - 60, y=130)
+    confirm_btn.place(x=screen_width//2 - 30, y=180)
+
+def confirm_level():
+    level_menu.place_forget()
+    confirm_btn.place_forget()
+    start_playing()
+
+def start_playing():
+    global score, words_played
+    score = 0
+    words_played = 0
+    score_label.config(text=f"Score: {score}")
+    new_word()
+    reset_timer()
+    countdown()
+
+def new_word():
+    global current_word, scrambled, remaining_words, words_played
+
+    if words_played >= max_words:
+        game_over()
+        return
+
+    selected_level = level_var.get()
+
+    if not remaining_words:
+        remaining_words = get_word_by_level(selected_level)
+        random.shuffle(remaining_words)
+
+    if not remaining_words:
+        game_over()
+        return
+
+    current_word = remaining_words.pop()
+    used_words.append(current_word)
+    scrambled = scramble_word(current_word)
+    word_label.config(text=f"Unscramble: {scrambled}")
+    guess_entry.delete(0, tk.END)
+    words_played += 1
+    reset_timer()
+
+def check_guess():
+    user_guess = guess_entry.get().lower()
+    if user_guess == current_word:
+        global score
+        score += 1
+        score_label.config(text=f"Score: {score}")
+        messagebox.showinfo("✅ Correct!", "Well done!")
+        new_word()
+    else:
+        messagebox.showerror("❌ Oops!", "That's not correct. Try again!")
+
+def give_hint():
+    messagebox.showinfo("Hint 💡", f"The first letter is: {current_word[0].upper()}")
+
+def countdown():
+    if time_left[0] > 0:
+        time_left[0] -= 1
+        timer_label.config(text=f"Time Left: {time_left[0]}s")
+        root.after(1000, countdown)
+    else:
+        messagebox.showwarning("⏰ Time's Up!", f"The correct word was: {current_word}")
+        new_word()
+        if remaining_words:
+            countdown()
+        else:
+            game_over()
+
+def reset_timer():
+    time_left[0] = 30
+    timer_label.config(text=f"Time Left: {time_left[0]}s")
+
+def game_over():
+    play = messagebox.askyesno("🎉 Game Over", f"You finished {max_words} words!\nYour final score is: {score}\n\nPlay again?")
+    if play:
+        reset_game()
+    else:
+        root.destroy()
+
+def reset_game():
+    global score, used_words, remaining_words, words_played
+    score = 0
+    words_played = 0
+    used_words = []
+    remaining_words = []
+    score_label.config(text=f"Score: {score}")
+    start_game()
+
+def quit_fullscreen(event=None):
+    root.attributes('-fullscreen', False)
+
+# -------------------- GUI SETUP --------------------
+root = tk.Tk()
+root.title("🧠 Word Scramble Game")
+root.attributes('-fullscreen', True)
+root.bind("<Escape>", quit_fullscreen)
+
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+
+# -------------------- BACKGROUND IMAGE --------------------
+bg_img = Image.open("userlogin.jpg")  # Replace with your image filename
+bg_img = bg_img.resize((screen_width, screen_height), Image.Resampling.LANCZOS)
+bg_photo = ImageTk.PhotoImage(bg_img)
+
+bg_label = tk.Label(root, image=bg_photo)
+bg_label.place(x=0, y=0, relwidth=1, relheight=1)
+
+# -------------------- GAME UI --------------------
+score = 0
+time_left = [30]
+
+title_label = tk.Label(root, text="WORD SCRAMBLE GAME", font=("Comic Sans MS", 30, "bold"), bg="white", fg="#333")
+title_label.place(x=screen_width//2 - 250, y=50)
+
+score_label = tk.Label(root, text="Score: 0", font=("Arial", 18, "bold"), bg="white", fg="black")
+score_label.place(x=screen_width - 180, y=30)
+
+timer_label = tk.Label(root, text=f"Time Left: 30s", font=("Arial", 16), bg="white", fg="#f44336")
+timer_label.place(x=30, y=30)
+
+level_var = tk.StringVar(value="Medium")
+level_menu = tk.OptionMenu(root, level_var, "Easy", "Medium", "Hard")
+level_menu.config(font=("Arial", 12), bg="#2196F3", fg="white")
+
+confirm_btn = tk.Button(root, text="Confirm Level", font=("Arial", 12), bg="#673AB7", fg="white", command=confirm_level)
+
+word_label = tk.Label(root, text="", font=("Arial", 22, "bold"), bg="white", fg="#333")
+word_label.place(x=screen_width//2 - 150, y=240)
+
+guess_entry = tk.Entry(root, font=("Arial", 18), justify="center", width=20)
+guess_entry.place(x=screen_width//2 - 120, y=310)
+
+submit_btn = tk.Button(root, text="Submit", font=("Arial", 14), bg="#4CAF50", fg="white", command=check_guess)
+submit_btn.place(x=screen_width//2 - 80, y=360)
+
+hint_btn = tk.Button(root, text="Hint 💡", font=("Arial", 14), bg="#FF9800", fg="white", command=give_hint)
+hint_btn.place(x=screen_width//2 + 10, y=360)
+
+start_btn = tk.Button(root, text="Start Game", font=("Arial", 16, "bold"), bg="#E91E63", fg="white", command=start_game)
+start_btn.place(x=screen_width//2 - 70, y=180)
+
+root.mainloop()
